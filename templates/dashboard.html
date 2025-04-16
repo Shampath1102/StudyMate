@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dashboard - EduPlatform</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body { background: #f8f9fa; }
+        .sidebar {
+            width: 250px;
+            height: 100vh;
+            position: fixed;
+            background: #343a40;
+            padding-top: 20px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+        .sidebar a {
+            padding: 12px 20px;
+            display: block;
+            color: white;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+        .sidebar a:hover {
+            background: #495057;
+            border-left: 3px solid #0d6efd;
+        }
+        .content { margin-left: 260px; padding: 20px; }
+        .badge { font-size: 0.9em; }
+        .stat-card {
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover { transform: translateY(-5px); }
+        .activity-item {
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+        .activity-item:hover { transform: translateX(5px); }
+        .leaderboard-item {
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            background: white;
+            transition: all 0.2s ease;
+        }
+        .leaderboard-item:hover { transform: scale(1.02); }
+        .filter-section {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar">
+    <h4 class="text-center text-white mb-4">EduPlatform</h4>
+    <a href="{{ url_for('dashboard') }}" class="active"><i class="fas fa-chart-line me-2"></i>Dashboard</a>
+    <a href="{{ url_for('study_material') }}"><i class="fas fa-book me-2"></i>Study Materials</a>
+    <a href="{{ url_for('discussions') }}"><i class="fas fa-comments me-2"></i>Discussions</a>
+    <a href="{{ url_for('question_papers') }}"><i class="fas fa-file-alt me-2"></i>Question Papers</a>
+    <a href="{{ url_for('bookmarks') }}"><i class="fas fa-bookmark me-2"></i>Bookmarks</a>
+    <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a>
+</div>
+
+<!-- Main Content -->
+<div class="content">
+    <!-- User Welcome Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>Welcome, {{ current_user.username }}! <span class="badge bg-success">{{ current_user.points }} C-Points</span></h2>
+            <p class="text-muted">Track your progress and stay updated with recent activities</p>
+        </div>
+        <div class="text-end">
+            <h5>Your Achievements</h5>
+            <div class="d-flex gap-2">
+                {% for badge in current_user.badges %}
+                <span class="badge bg-info" title="{{ badge.description }}"><i class="fas fa-award me-1"></i>{{ badge.name }}</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card bg-primary text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Question Papers</h6>
+                    <h3 class="mb-0">{{ total_points }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card bg-success text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Study Materials</h6>
+                    <h3 class="mb-0">{{ recent_materials|length }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card bg-info text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Discussions</h6>
+                    <h3 class="mb-0">{{ recent_discussions|length }}</h3>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card stat-card bg-warning text-dark">
+                <div class="card-body">
+                    <h6 class="card-title">Bookmarks</h6>
+                    <h3 class="mb-0">{{ bookmarks|length }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Activity Feed -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Recent Activities</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Recent Study Materials -->
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-3">Study Materials in {{ current_user.branch }}</h6>
+                        {% for material in recent_materials %}
+                        <div class="activity-item">
+                            <i class="fas fa-book text-primary me-2"></i>
+                            {{ material.title }}
+                            <small class="text-muted float-end">{{ material.upload_date.strftime('%Y-%m-%d') }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Recent Discussions -->
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-3">Discussions in {{ current_user.branch }}</h6>
+                        {% for discussion in recent_discussions %}
+                        <div class="activity-item">
+                            <i class="fas fa-comments text-success me-2"></i>
+                            {{ discussion.title }}
+                            <small class="text-muted float-end">{{ discussion.timestamp.strftime('%Y-%m-%d') }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Points History -->
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-3">Points Earned</h6>
+                        {% for point in points_history %}
+                        <div class="activity-item">
+                            <i class="fas fa-star text-warning me-2"></i>
+                            {{ point.action }}: +{{ point.points }} points
+                            <small class="text-muted float-end">{{ point.timestamp.strftime('%Y-%m-%d') }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leaderboard Section -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Leaderboard</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Filters -->
+                    <div class="filter-section">
+                        <div class="mb-3">
+                            <label class="form-label">Time Period</label>
+                            <select id="leaderboardType" class="form-select form-select-sm">
+                                <option value="all-time">All Time</option>
+                                <option value="weekly">This Week</option>
+                                <option value="monthly">This Month</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">Branch</label>
+                            <select id="branchFilter" class="form-select form-select-sm">
+                                <option value="all">All Branches</option>
+                                {% for branch in branches %}
+                                <option value="{{ branch }}">{{ branch }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Leaderboard List -->
+                    <div class="leaderboard-list">
+                        {% for user in leaderboard %}
+                        <div class="leaderboard-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="me-2">{% if loop.index <= 3 %}{{ ['🥇', '🥈', '🥉'][loop.index0] }}{% else %}{{ loop.index }}{% endif %}</span>
+                                {{ user.username }}
+                            </div>
+                            <span class="badge bg-primary">{{ user.points }} pts</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const leaderboardType = document.getElementById('leaderboardType');
+    const branchFilter = document.getElementById('branchFilter');
+
+    function updateLeaderboard() {
+        const timeframe = leaderboardType.value;
+        const branch = branchFilter.value;
+
+        fetch(`/get_leaderboard?timeframe=${timeframe}&branch=${branch}`)
+            .then(response => response.json())
+            .then(data => {
+                const leaderboardList = document.querySelector('.leaderboard-list');
+                leaderboardList.innerHTML = '';
+
+                data.slice(0, 10).forEach((user, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'leaderboard-item d-flex justify-content-between align-items-center';
+
+                    const rankEmoji = index < 3 ? ['🥇', '🥈', '🥉'][index] : (index + 1);
+                    item.innerHTML = `
+                        <div>
+                            <span class="me-2">${rankEmoji}</span>
+                            ${user.username}
+                        </div>
+                        <span class="badge bg-primary">${user.points} pts</span>
+                    `;
+                    leaderboardList.appendChild(item);
+                });
+            });
+    }
+
+    leaderboardType.addEventListener('change', updateLeaderboard);
+    branchFilter.addEventListener('change', updateLeaderboard);
+});
+</script>
+</body>
+</html>

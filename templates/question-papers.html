@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Question Papers - EduPlatform</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            background: #f8f9fa;
+        }
+        .container {
+            max-width: 1000px;
+            margin-top: 50px;
+        }
+        .paper-card {
+            transition: transform 0.2s;
+        }
+        .paper-card:hover {
+            transform: translateY(-5px);
+        }
+        .preview-modal .modal-body {
+            height: 500px;
+        }
+        .preview-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Navigation Bar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="{{ url_for('dashboard') }}">EduPlatform</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('study_material') }}">Study Materials</a></li>
+                <li class="nav-item"><a class="nav-link active" href="{{ url_for('question_papers') }}">Question Papers</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('discussions') }}">Discussions</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}">Logout</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Main Content -->
+<div class="container">
+    <h2 class="text-center mb-4">📝 Question Papers</h2>
+
+    <!-- Bookmark Modal -->
+    <div class="modal fade" id="bookmarkModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Bookmark</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="bookmarkForm" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Tags (comma-separated)</label>
+                            <input type="text" name="tags" class="form-control" placeholder="e.g., important, exam, review">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Folder</label>
+                            <input type="text" name="folder" class="form-control" placeholder="e.g., Semester 1, Finals">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Bookmark</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Search and Filter Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Branch</label>
+                    <select name="branch" class="form-select">
+                        <option value="">All Branches</option>
+                        {% for branch in branches %}
+                        <option value="{{ branch }}" {% if branch == request.args.get('branch') %}selected{% endif %}>{{ branch }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Exam Type</label>
+                    <select name="exam_type" class="form-select">
+                        <option value="">All Types</option>
+                        <option value="midterm" {% if request.args.get('exam_type') == 'midterm' %}selected{% endif %}>Midterm</option>
+                        <option value="final" {% if request.args.get('exam_type') == 'final' %}selected{% endif %}>Final</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Search</label>
+                    <input type="text" name="search" class="form-control" value="{{ request.args.get('search', '') }}" placeholder="Search by subject...">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">Search</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Upload Question Paper Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Upload Question Paper</h5>
+            <form action="{{ url_for('upload_question_paper') }}" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Subject</label>
+                        <input type="text" class="form-control" name="subject" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Exam Type</label>
+                        <select class="form-select" name="exam_type" required>
+                            <option value="">Select Type</option>
+                            <option value="midterm">Midterm</option>
+                            <option value="final">Final</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Branch</label>
+                        <select name="branch" class="form-select" required>
+                            {% for branch in branches %}
+                            <option value="{{ branch }}">{{ branch }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">File</label>
+                        <input type="file" class="form-control" name="file" accept=".pdf,.doc,.docx" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-success mt-3">Upload Paper</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Question Papers List -->
+    <div class="row">
+        {% for paper in papers %}
+        <div class="col-md-6 mb-4">
+            <div class="card paper-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ paper.subject }}</h5>
+                    <p class="card-text">
+                        <span class="badge bg-primary">{{ paper.exam_type }}</span>
+                        <span class="badge bg-secondary">{{ paper.branch }}</span>
+                    </p>
+                    <p class="text-muted small">Uploaded by {{ paper.uploader.username }} on {{ paper.upload_date.strftime('%Y-%m-%d') }}</p>
+                    
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('download_file', filename=paper.filename) }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-download"></i> Download
+                        </a>
+                        <button class="btn btn-info btn-sm" onclick="previewFile('{{ paper.filename }}')">
+                            <i class="fas fa-eye"></i> Preview
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#bookmarkModal"
+                            data-content-id="{{ paper.id }}"
+                            data-content-type="question_paper">
+                            <i class="fas fa-bookmark"></i> Bookmark
+                        </button>
+                    </div>
+
+                    <!-- Answer Key Section -->
+                    {% if paper.answer_keys %}
+                    <div class="mt-3">
+                        <h6>Answer Key:</h6>
+                        {% for key in paper.answer_keys %}
+                        <div class="d-flex gap-2">
+                            <a href="{{ url_for('download_file', filename=key.filename) }}" class="btn btn-success btn-sm">
+                                <i class="fas fa-download"></i> Download Key
+                            </a>
+                            <button class="btn btn-info btn-sm" onclick="previewFile('{{ key.filename }}')">
+                                <i class="fas fa-eye"></i> View Key
+                            </button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="mt-3">
+                        <form action="{{ url_for('upload_answer_key', paper_id=paper.id) }}" method="POST" enctype="multipart/form-data" class="d-flex gap-2">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="file" class="form-control form-control-sm" name="file" accept=".pdf,.doc,.docx" required>
+                            <button type="submit" class="btn btn-success btn-sm">Upload Key</button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12 text-center">
+            <p class="text-muted">No question papers found.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal fade preview-modal" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Document Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <iframe class="preview-frame" id="previewFrame"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const bookmarkModal = document.getElementById('bookmarkModal');
+    const bookmarkForm = document.getElementById('bookmarkForm');
+
+    bookmarkModal.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const contentId = button.getAttribute('data-content-id');
+        const contentType = button.getAttribute('data-content-type');
+        bookmarkForm.action = `/bookmark/${contentType}/${contentId}`;
+    });
+});
+</script> 
+
+</script>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>My Bookmarks - EduPlatform</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            background: #f8f9fa;
+        }
+        .container {
+            max-width: 1000px;
+            margin-top: 50px;
+        }
+        .card {
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+
+<!-- Navigation Bar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="{{ url_for('dashboard') }}">EduPlatform</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('study_material') }}">Study Materials</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('question_papers') }}">Question Papers</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('discussions') }}">Discussions</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}">Logout</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    <h2 class="mb-4">📌 My Bookmarks</h2>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Content Type</label>
+                    <select name="content_type" class="form-select">
+                        <option value="">All Types</option>
+                        <option value="study_material" {% if request.args.get('content_type') == 'study_material' %}selected{% endif %}>Study Materials</option>
+                        <option value="discussion" {% if request.args.get('content_type') == 'discussion' %}selected{% endif %}>Discussions</option>
+                        <option value="question_paper" {% if request.args.get('content_type') == 'question_paper' %}selected{% endif %}>Question Papers</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Folder</label>
+                    <select name="folder" class="form-select">
+                        <option value="">All Folders</option>
+                        {% for folder in folders %}
+                            <option value="{{ folder }}" {% if request.args.get('folder') == folder %}selected{% endif %}>{{ folder }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Search</label>
+                    <input type="text" name="search" class="form-control" value="{{ request.args.get('search', '') }}" placeholder="Search bookmarks...">
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary">Apply Filters</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bookmarks List -->
+    <div class="row">
+        {% for bookmark in bookmarks %}
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <h5 class="card-title">
+                            {% if bookmark.content_type == 'study_material' %}
+                                📚
+                            {% elif bookmark.content_type == 'discussion' %}
+                                💬
+                            {% else %}
+                                📝
+                            {% endif %}
+                            {% if bookmark.content_type == 'study_material' and bookmark.get('study_material') %}
+                                {{ bookmark.study_material.get('title', 'Untitled Study Material') }}
+                            {% elif bookmark.content_type == 'discussion' and bookmark.get('discussion') %}
+                                {{ bookmark.discussion.get('title', 'Untitled Discussion') }}
+                            {% elif bookmark.content_type == 'question_paper' and bookmark.get('question_paper') %}
+                                {{ bookmark.question_paper.get('subject', 'Untitled Question Paper') }}
+                            {% else %}
+                                Untitled Content
+                            {% endif %}
+                        </h5>
+                        <form method="POST" action="{{ url_for('remove_bookmark', bookmark_id=bookmark.id) }}" style="display: inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to remove this bookmark?')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                    <p class="card-text">
+                        <small class="text-muted">
+                            Type: {{ bookmark.content_type | replace('_', ' ') | title }}
+                            {% if bookmark.folder %}
+                                | Folder: {{ bookmark.folder }}
+                            {% endif %}
+                        </small>
+                    </p>
+                    {% if bookmark.tags %}
+                    <p class="card-text">
+                        {% for tag in bookmark.tags.split(',') %}
+                            <span class="badge bg-secondary me-1">{{ tag.strip() }}</span>
+                        {% endfor %}
+                    </p>
+                    {% endif %}
+                    <a href="{{ bookmark.content_url }}" class="btn btn-sm btn-primary">View Content</a>
+                </div>
+                <div class="card-footer text-muted">
+                    Bookmarked on {{ bookmark.created_at.strftime('%Y-%m-%d') }}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="alert alert-info" role="alert">
+                No bookmarks found. Start bookmarking your favorite content!
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
